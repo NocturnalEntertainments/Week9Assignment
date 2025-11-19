@@ -6,6 +6,8 @@ public class PyramidGen : MonoBehaviour
     public float pyramidSize = 1f;
     public Vector3 pyramidPos;
 
+    public Vector3 rotation; // rotation.x, rotation.y, rotation.z in degrees
+
     private void OnPostRender()
     {
         if (material == null || PerspectiveCamera.Instance == null)
@@ -20,14 +22,21 @@ public class PyramidGen : MonoBehaviour
         GL.Begin(GL.LINES);
         material.SetPass(0);
 
-        // Pyramid vertices (in world 3D space)
-        Vector3 A = new Vector3(-1, 0, -1) * pyramidSize + pyramidPos;
-        Vector3 B = new Vector3(1, 0, -1) * pyramidSize + pyramidPos;
-        Vector3 C = new Vector3(1, 0, 1) * pyramidSize + pyramidPos;
-        Vector3 D = new Vector3(-1, 0, 1) * pyramidSize + pyramidPos;
-        Vector3 E = new Vector3(0, 1.5f, 0) * pyramidSize + pyramidPos;
+        // Original local pyramid vertices
+        Vector3 A = new Vector3(-1, 0, -1) * pyramidSize;
+        Vector3 B = new Vector3(1, 0, -1) * pyramidSize;
+        Vector3 C = new Vector3(1, 0, 1) * pyramidSize;
+        Vector3 D = new Vector3(-1, 0, 1) * pyramidSize;
+        Vector3 E = new Vector3(0, 1.5f, 0) * pyramidSize;
 
-        // Project each 3D vertex into 2D
+        // Rotate everything
+        A = Rotate3D(A, rotation) + pyramidPos;
+        B = Rotate3D(B, rotation) + pyramidPos;
+        C = Rotate3D(C, rotation) + pyramidPos;
+        D = Rotate3D(D, rotation) + pyramidPos;
+        E = Rotate3D(E, rotation) + pyramidPos;
+
+        // Project to 2D
         Vector2 a2D = ProjectPoint(A);
         Vector2 b2D = ProjectPoint(B);
         Vector2 c2D = ProjectPoint(C);
@@ -48,6 +57,36 @@ public class PyramidGen : MonoBehaviour
 
         GL.End();
         GL.PopMatrix();
+    }
+
+    private Vector3 Rotate3D(Vector3 p, Vector3 rotDeg)
+    {
+        float rx = rotDeg.x * Mathf.Deg2Rad;
+        float ry = rotDeg.y * Mathf.Deg2Rad;
+        float rz = rotDeg.z * Mathf.Deg2Rad;
+
+        // Rotate around X
+        p = new Vector3(
+            p.x,
+            p.y * Mathf.Cos(rx) - p.z * Mathf.Sin(rx),
+            p.y * Mathf.Sin(rx) + p.z * Mathf.Cos(rx)
+        );
+
+        // Rotate around Y
+        p = new Vector3(
+            p.x * Mathf.Cos(ry) + p.z * Mathf.Sin(ry),
+            p.y,
+            -p.x * Mathf.Sin(ry) + p.z * Mathf.Cos(ry)
+        );
+
+        // Rotate around Z
+        p = new Vector3(
+            p.x * Mathf.Cos(rz) - p.y * Mathf.Sin(rz),
+            p.x * Mathf.Sin(rz) + p.y * Mathf.Cos(rz),
+            p.z
+        );
+
+        return p;
     }
 
     private Vector2 ProjectPoint(Vector3 point)

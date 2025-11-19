@@ -5,8 +5,10 @@ public class CylinderGen : MonoBehaviour
     public Material material;
     public float height = 2f;
     public float radius = 1f;
-    public int segments = 16; // More than 5 as requested
+    public int segments = 16;
     public Vector3 position;
+
+    public Vector3 rotation; // X Y Z rotation (in degrees)
 
     private void OnPostRender()
     {
@@ -24,30 +26,35 @@ public class CylinderGen : MonoBehaviour
 
         float halfHeight = height / 2f;
 
-        // Generate top and bottom circle points
         Vector3[] bottom = new Vector3[segments];
         Vector3[] top = new Vector3[segments];
 
+        // Generate vertices
         for (int i = 0; i < segments; i++)
         {
             float angle = (i / (float)segments) * Mathf.PI * 2f;
             float x = Mathf.Cos(angle) * radius;
             float z = Mathf.Sin(angle) * radius;
 
-            bottom[i] = new Vector3(x, -halfHeight, z) + position;
-            top[i] = new Vector3(x, halfHeight, z) + position;
+            bottom[i] = new Vector3(x, -halfHeight, z);
+            top[i]    = new Vector3(x,  halfHeight, z);
+
+            // Rotate
+            bottom[i] = Rotate3D(bottom[i], rotation) + position;
+            top[i]    = Rotate3D(top[i], rotation) + position;
         }
 
-        // Project to 2D using custom PerspectiveCamera
+        // Project
         Vector2[] bottom2D = new Vector2[segments];
         Vector2[] top2D = new Vector2[segments];
+
         for (int i = 0; i < segments; i++)
         {
             bottom2D[i] = ProjectPoint(bottom[i]);
-            top2D[i] = ProjectPoint(top[i]);
+            top2D[i]    = ProjectPoint(top[i]);
         }
 
-        // Draw base circles
+        // Base circles
         for (int i = 0; i < segments; i++)
         {
             int next = (i + 1) % segments;
@@ -55,14 +62,42 @@ public class CylinderGen : MonoBehaviour
             DrawLine(top2D[i], top2D[next]);
         }
 
-        // Draw vertical edges
+        // Vertical edges
         for (int i = 0; i < segments; i++)
-        {
             DrawLine(bottom2D[i], top2D[i]);
-        }
 
         GL.End();
         GL.PopMatrix();
+    }
+
+    private Vector3 Rotate3D(Vector3 p, Vector3 rot)
+    {
+        float rx = rot.x * Mathf.Deg2Rad;
+        float ry = rot.y * Mathf.Deg2Rad;
+        float rz = rot.z * Mathf.Deg2Rad;
+
+        // X
+        p = new Vector3(
+            p.x,
+            p.y * Mathf.Cos(rx) - p.z * Mathf.Sin(rx),
+            p.y * Mathf.Sin(rx) + p.z * Mathf.Cos(rx)
+        );
+
+        // Y
+        p = new Vector3(
+            p.x * Mathf.Cos(ry) + p.z * Mathf.Sin(ry),
+            p.y,
+            -p.x * Mathf.Sin(ry) + p.z * Mathf.Cos(ry)
+        );
+
+        // Z
+        p = new Vector3(
+            p.x * Mathf.Cos(rz) - p.y * Mathf.Sin(rz),
+            p.x * Mathf.Sin(rz) + p.y * Mathf.Cos(rz),
+            p.z
+        );
+
+        return p;
     }
 
     private Vector2 ProjectPoint(Vector3 point)
